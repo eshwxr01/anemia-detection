@@ -1,0 +1,12 @@
+{
+  "img_size": [
+    224,
+    224
+  ],
+  "labels": [
+    "L1",
+    "L2",
+    "L3"
+  ],
+  "model_path": "saved_model\\anaemia_model.keras"
+}

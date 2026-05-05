@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AnaemiaScan — Blood Smear Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #141417;
+    --surface2: #1c1c21;
+    --border: #2a2a32;
+    --accent: #e05c5c;
+    --accent2: #f59b6b;
+    --green: #5ce0a0;
+    --text: #f0ede8;
+    --muted: #7a7a8a;
+    --font-display: 'DM Serif Display', serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* background grid */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(224,92,92,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(224,92,92,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 40px 0 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 56px;
+  }
+
+  .logo-mark {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: grid; place-items: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .logo-text h1 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: -0.3px;
+    line-height: 1;
+  }
+
+  .logo-text span {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    margin-bottom: 48px;
+  }
+
+  .hero h2 {
+    font-family: var(--font-display);
+    font-size: clamp(36px, 6vw, 56px);
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 16px;
+  }
+
+  .hero h2 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 16px;
+    line-height: 1.7;
+    max-width: 520px;
+    font-weight: 300;
+  }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-section {
+    margin-bottom: 40px;
+  }
+
+  .drop-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: 20px;
+    padding: 56px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .drop-zone::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(224,92,92,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: #1a1419;
+    transform: translateY(-2px);
+    box-shadow: 0 16px 48px rgba(224,92,92,0.12);
+  }
+
+  .drop-zone input[type="file"] {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer;
+    width: 100%; height: 100%;
+  }
+
+  .drop-icon {
+    font-size: 40px;
+    margin-bottom: 16px;
+    display: block;
+    filter: grayscale(0.3);
+  }
+
+  .drop-zone h3 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
+
+  .drop-zone p {
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 300;
+  }
+
+  .drop-zone .hint {
+    display: inline-block;
+    margin-top: 20px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    padding: 6px 14px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* preview */
+  .preview-box {
+    display: none;
+    margin-top: 20px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    position: relative;
+    background: var(--surface2);
+  }
+
+  .preview-box img {
+    width: 100%;
+    max-height: 320px;
+    object-fit: contain;
+    display: block;
+    padding: 12px;
+  }
+
+  .preview-name {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    padding: 8px 16px 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── ANALYZE BUTTON ── */
+  .btn-analyze {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    border: none;
+    border-radius: 14px;
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 16px;
+    letter-spacing: 0.02em;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-analyze:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(224,92,92,0.35);
+  }
+
+  .btn-analyze:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-analyze.loading::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+    animation: shimmer 1.2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* ── LOADING ── */
+  .loading-bar {
+    display: none;
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 100px;
+    overflow: hidden;
+    margin-top: 16px;
+  }
+
+  .loading-bar.active { display: block; }
+
+  .loading-bar::after {
+    content: '';
+    display: block;
+    height: 100%;
+    width: 40%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 100px;
+    animation: progress 1.4s ease-in-out infinite;
+  }
+
+  @keyframes progress {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+  }
+
+  /* ── RESULTS ── */
+  #results {
+    display: none;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 28px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    border: 1px solid;
+  }
+
+  .result-header.anaemic {
+    background: rgba(224,92,92,0.08);
+    border-color: rgba(224,92,92,0.25);
+  }
+
+  .result-header.normal {
+    background: rgba(92,224,160,0.08);
+    border-color: rgba(92,224,160,0.25);
+  }
+
+  .result-icon {
+    font-size: 36px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .result-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 6px;
+  }
+
+  .result-header.anaemic .result-label { color: var(--accent); }
+  .result-header.normal  .result-label { color: var(--green); }
+
+  .result-diagnosis {
+    font-family: var(--font-display);
+    font-size: 30px;
+    line-height: 1.15;
+    margin-bottom: 8px;
+  }
+
+  .result-filename {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* confidence bar */
+  .confidence-wrap {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .conf-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+
+  .conf-bar-fill {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .anaemic .conf-bar-fill { background: var(--accent); }
+  .normal  .conf-bar-fill { background: var(--green); }
+
+  .conf-pct {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  /* stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+
+  .stat-card:hover { border-color: var(--accent); }
+
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 28px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-sub {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 300;
+  }
+
+  /* flags */
+  .flags-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+  }
+
+  .flags-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .flags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .flag-chip {
+    background: rgba(224,92,92,0.12);
+    border: 1px solid rgba(224,92,92,0.3);
+    color: var(--accent2);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 100px;
+  }
+
+  .no-flags {
+    font-size: 14px;
+    color: var(--muted);
+    font-style: italic;
+    font-family: var(--font-display);
+  }
+
+  /* meta row */
+  .meta-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .meta-row span {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    border-radius: 100px;
+  }
+
+  /* error */
+  .error-box {
+    display: none;
+    background: rgba(224,92,92,0.1);
+    border: 1px solid rgba(224,92,92,0.3);
+    border-radius: 14px;
+    padding: 18px 20px;
+    color: #f8a0a0;
+    font-size: 14px;
+    margin-top: 12px;
+  }
+
+  /* reset */
+  .btn-reset {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 10px 22px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 24px;
+    transition: all 0.2s;
+  }
+
+  .btn-reset:hover { border-color: var(--text); color: var(--text); }
+
+  /* footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 28px 0;
+    margin-top: 64px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-mark">🩸</div>
+    <div class="logo-text">
+      <h1>AnaemiaScan</h1>
+      <span>Blood Smear Analysis System</span>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h2>Detect Anaemia<br/>from <em>blood smear</em><br/>images instantly.</h2>
+    <p>Upload a microscopic blood smear image. Our deep learning model analyses RBC morphology — pallor, cell area, circularity — and returns a diagnosis in seconds.</p>
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="upload-section">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="image/png,image/jpeg,image/tiff,image/bmp" />
+      <span class="drop-icon">🔬</span>
+      <h3>Drop your smear image here</h3>
+      <p>or click to browse from your computer</p>
+      <span class="hint">PNG · JPG · TIFF · BMP · Max 20 MB</span>
+    </div>
+
+    <div class="preview-box" id="previewBox">
+      <img id="previewImg" src="" alt="Preview" />
+      <div class="preview-name" id="previewName"></div>
+    </div>
+
+    <button class="btn-analyze" id="analyzeBtn" disabled>
+      Analyse Image
+    </button>
+    <div class="loading-bar" id="loadingBar"></div>
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+
+    <div class="result-header" id="resultHeader">
+      <div class="result-icon" id="resultIcon"></div>
+      <div style="flex:1">
+        <div class="result-label" id="resultLabel"></div>
+        <div class="result-diagnosis" id="resultDiagnosis"></div>
+        <div class="result-filename" id="resultFilename"></div>
+        <div class="confidence-wrap">
+          <div class="conf-bar-bg">
+            <div class="conf-bar-fill" id="confBarFill" style="width:0%"></div>
+          </div>
+          <span class="conf-pct" id="confPct"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">RBC Count</div>
+        <div class="stat-value" id="statRbc">—</div>
+        <div class="stat-sub">cells detected</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Mean Cell Area</div>
+        <div class="stat-value" id="statArea">—</div>
+        <div class="stat-sub">pixels²</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pallor Ratio</div>
+        <div class="stat-value" id="statPallor">—</div>
+        <div class="stat-sub">inner / outer brightness</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Circularity</div>
+        <div class="stat-value" id="statCirc">—</div>
+        <div class="stat-sub">shape regularity</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Anaemia Probability</div>
+        <div class="stat-value" id="statProb">—</div>
+        <div class="stat-sub">model confidence</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Processing Time</div>
+        <div class="stat-value" id="statTime">—</div>
+        <div class="stat-sub">milliseconds</div>
+      </div>
+    </div>
+
+    <div class="flags-section">
+      <div class="flags-title">Morphology Flags</div>
+      <div class="flags-list" id="flagsList"></div>
+    </div>
+
+    <div class="meta-row" id="metaRow"></div>
+
+    <button class="btn-reset" id="resetBtn">← Analyse Another Image</button>
+  </div>
+
+</div>
+
+<footer>AnaemiaScan v1.0 · Deep Learning · RBC Morphology Analysis</footer>
+
+<script>
+  const API = "http://localhost:8000";
+
+  const dropZone   = document.getElementById("dropZone");
+  const fileInput  = document.getElementById("fileInput");
+  const analyzeBtn = document.getElementById("analyzeBtn");
+  const previewBox = document.getElementById("previewBox");
+  const previewImg = document.getElementById("previewImg");
+  const previewName= document.getElementById("previewName");
+  const loadingBar = document.getElementById("loadingBar");
+  const errorBox   = document.getElementById("errorBox");
+  const results    = document.getElementById("results");
+  const resetBtn   = document.getElementById("resetBtn");
+
+  let selectedFile = null;
+
+  // drag-over highlight
+  dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropZone.classList.remove("drag-over");
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files[0]) handleFile(fileInput.files[0]);
+  });
+
+  function handleFile(file) {
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      previewImg.src = ev.target.result;
+      previewName.textContent = `📎 ${file.name}  (${(file.size/1024).toFixed(1)} KB)`;
+      previewBox.style.display = "block";
+    };
+    reader.readAsDataURL(file);
+    analyzeBtn.disabled = false;
+    results.style.display = "none";
+    errorBox.style.display = "none";
+  }
+
+  analyzeBtn.addEventListener("click", async () => {
+    if (!selectedFile) return;
+    analyzeBtn.disabled = true;
+    analyzeBtn.textContent = "Analysing…";
+    analyzeBtn.classList.add("loading");
+    loadingBar.classList.add("active");
+    errorBox.style.display = "none";
+    results.style.display = "none";
+
+    const fd = new FormData();
+    fd.append("file", selectedFile);
+
+    try {
+      const resp = await fetch(`${API}/analyze`, { method: "POST", body: fd });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+        throw new Error(err.detail || "Server error");
+      }
+      const data = await resp.json();
+      showResults(data);
+    } catch (e) {
+      errorBox.textContent = `⚠ ${e.message}. Make sure the backend is running at ${API}`;
+      errorBox.style.display = "block";
+    } finally {
+      analyzeBtn.disabled = false;
+      analyzeBtn.textContent = "Analyse Image";
+      analyzeBtn.classList.remove("loading");
+      loadingBar.classList.remove("active");
+    }
+  });
+
+  function showResults(d) {
+    const isAnaemic = d.diagnosis.toLowerCase().includes("anaem");
+
+    const header = document.getElementById("resultHeader");
+    header.className = "result-header " + (isAnaemic ? "anaemic" : "normal");
+
+    document.getElementById("resultIcon").textContent      = isAnaemic ? "⚠️" : "✅";
+    document.getElementById("resultLabel").textContent     = isAnaemic ? "Condition Detected" : "No Condition Detected";
+    document.getElementById("resultDiagnosis").textContent = d.diagnosis;
+    document.getElementById("resultFilename").textContent  = `File: ${d.filename}`;
+
+    const pct = d.confidence_pct;
+    document.getElementById("confPct").textContent = `${pct}% confidence`;
+    setTimeout(() => {
+      document.getElementById("confBarFill").style.width = pct + "%";
+    }, 100);
+
+    document.getElementById("statRbc").textContent    = d.rbc_count;
+    document.getElementById("statArea").textContent   = d.mean_cell_area.toFixed(1);
+    document.getElementById("statPallor").textContent = d.pallor_ratio.toFixed(3);
+    document.getElementById("statCirc").textContent   = d.circularity.toFixed(3);
+    document.getElementById("statProb").textContent   = (d.anaemia_probability * 100).toFixed(1) + "%";
+    document.getElementById("statTime").textContent   = d.processing_ms;
+
+    const flagsList = document.getElementById("flagsList");
+    flagsList.innerHTML = "";
+    if (d.morphology_flags && d.morphology_flags.length > 0) {
+      d.morphology_flags.forEach(f => {
+        const chip = document.createElement("span");
+        chip.className = "flag-chip";
+        chip.textContent = f;
+        flagsList.appendChild(chip);
+      });
+    } else {
+      flagsList.innerHTML = '<span class="no-flags">No morphology abnormalities detected.</span>';
+    }
+
+    document.getElementById("metaRow").innerHTML =
+      `<span>Model v${d.model_version || "1.0.0"}</span>
+       <span>Threshold: 0.5</span>
+       <span>${new Date().toLocaleString()}</span>`;
+
+    results.style.display = "block";
+    results.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  resetBtn.addEventListener("click", () => {
+    selectedFile = null;
+    fileInput.value = "";
+    previewBox.style.display = "none";
+    results.style.display = "none";
+    analyzeBtn.disabled = true;
+    analyzeBtn.textContent = "Analyse Image";
+    errorBox.style.display = "none";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+</script>
+</body>
+</html>

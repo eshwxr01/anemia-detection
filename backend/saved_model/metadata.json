@@ -1,0 +1,1 @@
+{"img_size": [224, 224], "threshold": 0.5, "labels": ["L1", "L2", "L3"], "model_version": "1.0.0"} 
